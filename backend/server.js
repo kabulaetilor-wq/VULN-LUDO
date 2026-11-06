@@ -4,7 +4,22 @@ const app = express();
 
 app.use(express.json());
 
-// COMPTES FICTIFS
+// ======================================
+// 1. ROUTE PUBLIQUE DE TEST DU SERVEUR
+// ======================================
+
+app.get("/", (req, res) => {
+    res.json({
+        name: "VULN-LUDO LAB API",
+        status: "online",
+        security: "IDOR protection enabled"
+    });
+});
+
+// ======================================
+// 2. UTILISATEURS FICTIFS
+// ======================================
+
 const users = {
     "leonard-token": {
         id: "101",
@@ -17,7 +32,10 @@ const users = {
     }
 };
 
-// PORTEFEUILLES FICTIFS
+// ======================================
+// 3. PORTEFEUILLES FICTIFS
+// ======================================
+
 const wallets = {
     "101": {
         balance: 10000
@@ -28,7 +46,10 @@ const wallets = {
     }
 };
 
-// AUTHENTIFICATION SIMPLIFIÉE
+// ======================================
+// 4. AUTHENTIFICATION
+// ======================================
+
 app.use((req, res, next) => {
 
     const token = req.headers.authorization;
@@ -37,7 +58,8 @@ app.use((req, res, next) => {
 
     if (!user) {
         return res.status(401).json({
-            error: "Non autorisé"
+            error: "Non autorisé",
+            message: "Jeton invalide ou absent"
         });
     }
 
@@ -46,7 +68,10 @@ app.use((req, res, next) => {
     next();
 });
 
-// ROUTE DE TEST DU JOUEUR CONNECTÉ
+// ======================================
+// 5. ROUTE PROFIL UTILISATEUR
+// ======================================
+
 app.get("/me", (req, res) => {
 
     res.json({
@@ -56,26 +81,61 @@ app.get("/me", (req, res) => {
 
 });
 
-// ROUTE DU PORTEFEUILLE
+// ======================================
+// 6. ROUTE PORTEFEUILLE SÉCURISÉE
+// ======================================
+
 app.get("/wallet/:userId", (req, res) => {
 
-    const wallet = wallets[req.params.userId];
+    // Vérification de propriété du portefeuille
+    if (req.params.userId !== req.user.id) {
+
+        return res.status(403).json({
+            error: "Accès interdit",
+            message: "Vous ne pouvez pas consulter le portefeuille d'un autre utilisateur"
+        });
+
+    }
+
+    const wallet = wallets[req.user.id];
 
     if (!wallet) {
+
         return res.status(404).json({
             error: "Portefeuille introuvable"
         });
+
     }
 
     res.json({
-        userId: req.params.userId,
+        userId: req.user.id,
         balance: wallet.balance
     });
 
 });
 
+// ======================================
+// 7. ROUTES INCONNUES
+// ======================================
+
+app.use((req, res) => {
+
+    res.status(404).json({
+        error: "Route introuvable"
+    });
+
+});
+
+// ======================================
+// 8. DÉMARRAGE DU SERVEUR
+// ======================================
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, "0.0.0.0", () => {
-    console.log("VULN-LUDO API démarrée sur le port " + PORT);
+
+    console.log(
+        "VULN-LUDO API démarrée sur le port " + PORT
+    );
+
 });
